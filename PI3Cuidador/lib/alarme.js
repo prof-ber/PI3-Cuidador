@@ -173,6 +173,7 @@ const ConfigureAlarmButton = () => {
 const styles = StyleSheet.create({
   container: {
     padding: 16,
+    backgroundColor: '#f1f1f1',
   },
   alarmList: {
     marginTop: 20,
