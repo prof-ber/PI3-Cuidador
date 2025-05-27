@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Button,
@@ -13,6 +13,9 @@ import {
 } from 'react-native';
 import AlarmClock from 'react-native-alarm-clock';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const STORAGE_KEY = '@alarms_data';
 
 const ConfigureAlarmButton = () => {
   const [loading, setLoading] = useState(false);
@@ -21,6 +24,40 @@ const ConfigureAlarmButton = () => {
   const [alarmTime, setAlarmTime] = useState(new Date());
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [alarms, setAlarms] = useState([]);
+
+  // Load saved alarms on component mount
+  useEffect(() => {
+    loadAlarms();
+  }, []);
+
+  // Save alarms to AsyncStorage whenever they change
+  useEffect(() => {
+    saveAlarms();
+  }, [alarms]);
+
+  const loadAlarms = async () => {
+    try {
+      const savedAlarms = await AsyncStorage.getItem(STORAGE_KEY);
+      if (savedAlarms !== null) {
+        // Convert stored string dates back to Date objects
+        const parsedAlarms = JSON.parse(savedAlarms).map(alarm => ({
+          ...alarm,
+          time: new Date(alarm.time),
+        }));
+        setAlarms(parsedAlarms);
+      }
+    } catch (error) {
+      console.error('Error loading alarms:', error);
+    }
+  };
+
+  const saveAlarms = async () => {
+    try {
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(alarms));
+    } catch (error) {
+      console.error('Error saving alarms:', error);
+    }
+  };
 
   const openAlarmModal = () => {
     setAlarmName('');
@@ -44,19 +81,80 @@ const ConfigureAlarmButton = () => {
     setLoading(true);
     try {
       if (Platform.OS === 'android') {
-        // Format time for the alarm
-        await AlarmClock.createAlarm(alarmTime.toISOString(), alarmName);
+        // Generate a unique ID for the alarm
+        const alarmId = Date.now();
 
-        // Add to our local list of alarms
-        const newAlarm = {
-          id: Date.now().toString(),
-          name: alarmName,
-          time: alarmTime,
-        };
-        setAlarms([...alarms, newAlarm]);
+        // Get the hour and minute from the date object
+        const hour = alarmTime.getHours();
+        const minute = alarmTime.getMinutes();
 
-        Alert.alert('Sucesso', 'Alarme criado com sucesso!');
-        setModalVisible(false);
+        // Log what we're trying to do
+        console.log(`Creating alarm: ${alarmName} at ${hour}:${minute}`);
+
+        let success = false;
+
+        // Try approach 1: Object parameter (newer versions)
+        try {
+          console.log('Trying approach 1: Object parameter');
+          await AlarmClock.createAlarm({
+            hour: hour,
+            minutes: minute,
+            message: alarmName,
+          });
+          success = true;
+          console.log('Approach 1 succeeded');
+        } catch (error1) {
+          console.log('Approach 1 failed:', error1);
+
+          // Try approach 2: Individual parameters
+          try {
+            console.log('Trying approach 2: Individual parameters');
+            await AlarmClock.createAlarm(hour, minute, alarmName);
+            success = true;
+            console.log('Approach 2 succeeded');
+          } catch (error2) {
+            console.log('Approach 2 failed:', error2);
+
+            // Try approach 3: Your original approach
+            try {
+              console.log('Trying approach 3: Original approach');
+              await AlarmClock.createAlarm(alarmTime.toISOString(), alarmName, {
+                id: alarmId.toString(),
+              });
+              success = true;
+              console.log('Approach 3 succeeded');
+            } catch (error3) {
+              console.log('Approach 3 failed:', error3);
+
+              // Try approach 4: Simplified original approach
+              try {
+                console.log('Trying approach 4: Simplified original');
+                await AlarmClock.createAlarm(
+                  alarmTime.toISOString(),
+                  alarmName,
+                );
+                success = true;
+                console.log('Approach 4 succeeded');
+              } catch (error4) {
+                console.log('Approach 4 failed:', error4);
+                throw new Error('All approaches failed');
+              }
+            }
+          }
+        }
+
+        if (success) {
+          // Add to our local list of alarms
+          const newAlarm = {
+            id: alarmId.toString(),
+            name: alarmName,
+            time: alarmTime,
+          };
+          setAlarms([...alarms, newAlarm]);
+
+          Alert.alert('Sucesso', 'Alarme criado com sucesso!');
+          setModalVisible(false);
+        }
       } else {
         Alert.alert(
           'Indisponível',
@@ -65,15 +163,35 @@ const ConfigureAlarmButton = () => {
       }
     } catch (error) {
       console.error('Erro ao criar alarme:', error);
-      Alert.alert('Erro', 'Não foi possível criar o alarme.');
+
+      // Provide a more helpful error message with an option to open the alarm app
+      Alert.alert(
+        'Erro',
+        'Não foi possível criar o alarme automaticamente. Deseja abrir o aplicativo de relógio para criar manualmente?',
+        [
+          {
+            text: 'Sim',
+            onPress: () => {
+              try {
+                AlarmClock.openAlarms();
+              } catch (openError) {
+                console.error('Erro ao abrir alarmes:', openError);
+                Alert.alert(
+                  'Erro',
+                  'Não foi possível abrir o aplicativo de relógio.',
+                );
+              }
+            },
+          },
+          {
+            text: 'Não',
+            style: 'cancel',
+          },
+        ],
+      );
     } finally {
       setLoading(false);
     }
-  };
-
-  const deleteAlarm = id => {
-    // We can only manage our local list, not delete from the system
-    setAlarms(alarms.filter(alarm => alarm.id !== id));
   };
 
   const formatTime = date => {
@@ -95,23 +213,6 @@ const ConfigureAlarmButton = () => {
         onPress={openAlarmModal}
         disabled={loading}
       />
-
-      {alarms.length > 0 && (
-        <ScrollView style={styles.alarmList}>
-          <Text style={styles.sectionTitle}>Alarmes Configurados</Text>
-          {alarms.map(alarm => (
-            <View key={alarm.id} style={styles.alarmItem}>
-              <View>
-                <Text style={styles.alarmName}>{alarm.name}</Text>
-                <Text style={styles.alarmTime}>{formatTime(alarm.time)}</Text>
-              </View>
-              <TouchableOpacity onPress={() => deleteAlarm(alarm.id)}>
-                <Text style={styles.deleteButton}>🗑️</Text>
-              </TouchableOpacity>
-            </View>
-          ))}
-        </ScrollView>
-      )}
 
       <Modal
         visible={modalVisible}
