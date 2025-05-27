@@ -134,3 +134,23 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# Android build files
+/PI3Cuidador/android/build/
+/PI3Cuidador/android/app/src/google-services.json
+/PI3Cuidador/android/.gradle/
+/PI3Cuidador/android/.idea/
+/PI3Cuidador/android/app/build/
+/PI3Cuidador/android/app/.cxx
+/PI3Cuidador/android/local.properties
+
+# iOS build files
+/PI3Cuidador/ios/build/
+/PI3Cuidador/ios/Pods/
+/PI3Cuidador/ios/DerivedData/
+/PI3Cuidador/ios/*.xcworkspace
+/PI3Cuidador/ios/*.xcuserstate
+/PI3Cuidador/ios/.xcode.env.local
+
+# React Native
+.bundle/

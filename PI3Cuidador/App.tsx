@@ -1,130 +1,190 @@
 /**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
+ * Simple Firestore Test App
  */
 
-import React from 'react';
-import type {PropsWithChildren} from 'react';
+import React, {useState} from 'react';
 import {
+  SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
   Text,
+  TouchableOpacity,
   useColorScheme,
   View,
 } from 'react-native';
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
+import {Colors} from 'react-native/Libraries/NewAppScreen';
 
-type SectionProps = PropsWithChildren<{
-  title: string;
-}>;
-
-function Section({children, title}: SectionProps): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-  return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
-    </View>
-  );
-}
+// First, you need to install these packages:
+// npm install @react-native-firebase/app @react-native-firebase/firestore
+import firestore from '@react-native-firebase/firestore';
 
 function App(): React.JSX.Element {
   const isDarkMode = useColorScheme() === 'dark';
+  const [result, setResult] = useState<string>('No operations performed yet');
+  const [documents, setDocuments] = useState<any[]>([]);
 
   const backgroundStyle = {
     backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
+    flex: 1,
   };
 
-  /*
-   * To keep the template simple and small we're adding padding to prevent view
-   * from rendering under the System UI.
-   * For bigger apps the recommendation is to use `react-native-safe-area-context`:
-   * https://github.com/AppAndFlow/react-native-safe-area-context
-   *
-   * You can read more about it here:
-   * https://github.com/react-native-community/discussions-and-proposals/discussions/827
-   */
-  const safePadding = '5%';
+  // Function to add a document to Firestore
+  const addDocument = async () => {
+    try {
+      const timestamp = firestore.Timestamp.now();
+
+      const docRef = await firestore()
+        .collection('tests')
+        .add({
+          message: 'Test document added at ' + new Date().toLocaleTimeString(),
+          createdAt: timestamp,
+        });
+
+      setResult(`Document added with ID: ${docRef.id}`);
+    } catch (error) {
+      setResult(`Error adding document: ${error}`);
+      console.error('Error adding document: ', error);
+    }
+  };
+
+  // Function to query documents from Firestore
+  const queryDocuments = async () => {
+    try {
+      const querySnapshot = await firestore()
+        .collection('tests')
+        .orderBy('createdAt', 'desc')
+        .limit(5)
+        .get();
+
+      const docs = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      setDocuments(docs);
+      setResult(`Retrieved ${docs.length} documents`);
+    } catch (error) {
+      setResult(`Error querying documents: ${error}`);
+      console.error('Error querying documents: ', error);
+    }
+  };
 
   return (
-    <View style={backgroundStyle}>
+    <SafeAreaView style={backgroundStyle}>
       <StatusBar
         barStyle={isDarkMode ? 'light-content' : 'dark-content'}
         backgroundColor={backgroundStyle.backgroundColor}
       />
       <ScrollView
+        contentInsetAdjustmentBehavior="automatic"
         style={backgroundStyle}>
-        <View style={{paddingRight: safePadding}}>
-          <Header/>
-        </View>
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-            paddingHorizontal: safePadding,
-            paddingBottom: safePadding,
-          }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
+        <View style={styles.container}>
+          <Text style={styles.title}>Firestore Test App</Text>
+
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity style={styles.button} onPress={addDocument}>
+              <Text style={styles.buttonText}>Add Document</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.button} onPress={queryDocuments}>
+              <Text style={styles.buttonText}>Query Documents</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.resultContainer}>
+            <Text style={styles.resultTitle}>Result:</Text>
+            <Text style={styles.resultText}>{result}</Text>
+          </View>
+
+          {documents.length > 0 && (
+            <View style={styles.documentsContainer}>
+              <Text style={styles.documentsTitle}>Retrieved Documents:</Text>
+              {documents.map(doc => (
+                <View key={doc.id} style={styles.documentItem}>
+                  <Text style={styles.documentId}>ID: {doc.id}</Text>
+                  <Text>Message: {doc.message}</Text>
+                  <Text>
+                    Created: {doc.createdAt?.toDate().toLocaleString()}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
+  container: {
+    flex: 1,
+    padding: 20,
   },
-  sectionTitle: {
+  title: {
     fontSize: 24,
-    fontWeight: '600',
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
   },
-  sectionDescription: {
-    marginTop: 8,
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 20,
+  },
+  button: {
+    backgroundColor: '#2196F3',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    elevation: 3,
+  },
+  buttonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  resultContainer: {
+    backgroundColor: '#f5f5f5',
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  resultTitle: {
     fontSize: 18,
-    fontWeight: '400',
+    fontWeight: 'bold',
+    marginBottom: 8,
   },
-  highlight: {
-    fontWeight: '700',
+  resultText: {
+    fontSize: 16,
+  },
+  documentsContainer: {
+    backgroundColor: '#f5f5f5',
+    padding: 15,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  documentsTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  documentItem: {
+    backgroundColor: 'white',
+    padding: 10,
+    borderRadius: 5,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#eee',
+  },
+  documentId: {
+    fontWeight: 'bold',
+    marginBottom: 5,
   },
 });
 
