@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "876519007239",
+    "project_id": "pi3-cuidador",
+    "storage_bucket": "pi3-cuidador.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:876519007239:android:2d82eccb4647c524f736a2",
+        "android_client_info": {
+          "package_name": "com.pi3cuidador"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB0ZmIJokExVA2wUV3eugpTlEqzR_lJFnY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
