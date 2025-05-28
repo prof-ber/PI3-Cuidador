@@ -154,3 +154,5 @@ dist
 
 # React Native
 .bundle/
+# android
+/PI3Cuidador/android

@@ -12,8 +12,11 @@
   "dependencies": {
     "@react-native-firebase/app": "^22.2.0",
     "@react-native-firebase/firestore": "^22.2.0",
+    "@react-native-async-storage/async-storage": "^2.1.2",
+    "@react-native-community/datetimepicker": "^8.4.1",
     "react": "19.0.0",
-    "react-native": "0.79.2"
+    "react-native": "0.79.2",
+    "react-native-alarm-clock": "^2.0.2"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
