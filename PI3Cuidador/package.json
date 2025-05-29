@@ -19,6 +19,7 @@
     "react": "19.0.0",
     "react-native": "0.79.2",
     "react-native-sqlite-storage": "^6.0.1",
+    "react-native-add-calendar-event": "^5.0.0",
     "react-native-alarm-clock": "^2.0.2",
     "react-native-dotenv": "^3.4.11",
     "react-native-phone-call": "^1.2.0"
