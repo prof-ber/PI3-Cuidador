@@ -18,7 +18,7 @@ import SQLite from 'react-native-sqlite-storage';
 // Habilitar promises para SQLite
 SQLite.enablePromise(true);
 
-const CadastroIdoso = () => {
+const CadastroIdoso = ({ idosoId: idosoIdProp, onClose }) => {
   // Estados para os campos do formulário
   const [nome, setNome] = useState('');
   const [idade, setIdade] = useState('');
@@ -30,17 +30,34 @@ const CadastroIdoso = () => {
   const [doencas, setDoencas] = useState('');
   const [observacoes, setObservacoes] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false); // Adicionando estado para controlar o salvamento
   const [dataCadastro, setDataCadastro] = useState(null);
   const [idosoId, setIdosoId] = useState(null); // Para rastrear o ID do idoso no banco
 
-  // Carregar dados salvos quando o componente for montado
   // Carregar dados salvos quando o componente for montado
   useEffect(() => {
     const setup = async () => {
       setIsLoading(true);
       try {
         await inicializarBancoDeDados();
-        await carregarDados();
+        
+        // Se tiver um ID específico, carrega esse idoso
+        if (idosoIdProp) {
+          await carregarIdosoPorId(idosoIdProp);
+        } else {
+          // Se não tiver ID, cria um novo cadastro
+          setNome('');
+          setIdade('');
+          setEndereco('');
+          setContatos('');
+          setDescricao('');
+          setImportante('');
+          setAlergias('');
+          setDoencas('');
+          setObservacoes('');
+          setDataCadastro(null);
+          setIdosoId(null);
+        }
       } catch (error) {
         console.error('Erro na inicialização:', error);
         Alert.alert('Erro', 'Ocorreu um erro ao inicializar o aplicativo: ' + error.message);
@@ -48,9 +65,9 @@ const CadastroIdoso = () => {
         setIsLoading(false);
       }
     };
-    
+
     setup();
-  }, []);
+  }, [idosoIdProp]);
   
   // Função para inicializar o banco de dados
   const inicializarBancoDeDados = async () => {
@@ -147,18 +164,17 @@ const CadastroIdoso = () => {
 
   // Função para salvar os dados do idoso no SQLite
   const salvarDados = async () => {
-    // Validação básica
     if (!nome.trim()) {
-      Alert.alert('Erro', 'Por favor, informe o nome do idoso.');
+      Alert.alert('Erro', 'O nome do idoso é obrigatório');
       return;
     }
 
-    setIsLoading(true);
+    setIsSaving(true);
     let db = null;
 
     try {
       db = await openDatabase();
-      const agora = new Date().toISOString();
+      const dataAtual = new Date().toISOString();
 
       if (idosoId) {
         // Atualizar idoso existente
@@ -173,25 +189,27 @@ const CadastroIdoso = () => {
             alergias = ?, 
             doencas = ?, 
             observacoes = ?, 
-            ultima_atualizacao = ? 
+            ultima_atualizacao = ?
           WHERE id = ?`,
           [
-            nome.trim(),
+            nome,
             idade ? parseInt(idade) : null,
-            endereco.trim(),
-            contatos.trim(),
-            descricao.trim(),
-            importante.trim(),
-            alergias.trim(),
-            doencas.trim(),
-            observacoes.trim(),
-            agora,
+            endereco,
+            contatos,
+            descricao,
+            importante,
+            alergias,
+            doencas,
+            observacoes,
+            dataAtual,
             idosoId
           ]
         );
+
+        Alert.alert('Sucesso', 'Dados do idoso atualizados com sucesso!');
       } else {
         // Inserir novo idoso
-        const [result] = await db.executeSql(
+        await db.executeSql(
           `INSERT INTO idosos (
             nome, 
             idade, 
@@ -206,42 +224,79 @@ const CadastroIdoso = () => {
             ultima_atualizacao
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
-            nome.trim(),
+            nome,
             idade ? parseInt(idade) : null,
-            endereco.trim(),
-            contatos.trim(),
-            descricao.trim(),
-            importante.trim(),
-            alergias.trim(),
-            doencas.trim(),
-            observacoes.trim(),
-            agora,
-            agora
+            endereco,
+            contatos,
+            descricao,
+            importante,
+            alergias,
+            doencas,
+            observacoes,
+            dataAtual,
+            dataAtual
           ]
         );
-        
-        // Guardar o ID do idoso recém-criado
-        setIdosoId(result.insertId);
-        setDataCadastro(agora);
+
+        Alert.alert('Sucesso', 'Novo idoso cadastrado com sucesso!');
       }
 
-      // Mostrar mensagem de sucesso
-      if (Platform.OS === 'android') {
-        ToastAndroid.show('Cadastro salvo com sucesso!', ToastAndroid.SHORT);
-      } else {
-        Alert.alert('Sucesso', 'Cadastro do idoso salvo com sucesso!');
-      }
+      // Fechar o modal e informar que um cadastro foi realizado
+      onClose(true);
     } catch (error) {
       console.error('Erro ao salvar dados:', error);
-      Alert.alert('Erro', 'Não foi possível salvar o cadastro: ' + error.message);
+      Alert.alert('Erro', 'Não foi possível salvar os dados: ' + error.message);
     } finally {
       if (db) {
-        await db.close();
+        try {
+          await db.close();
+        } catch (closeError) {
+          console.error('Erro ao fechar conexão com banco:', closeError);
+        }
       }
-      setIsLoading(false);
+      setIsSaving(false);
     }
   };
 
+  const carregarIdosoPorId = async (id) => {
+    let db = null;
+    try {
+      db = await openDatabase();
+
+      const [result] = await db.executeSql(
+        'SELECT * FROM idosos WHERE id = ?',
+        [id]
+      );
+
+      if (result.rows.length > 0) {
+        const idoso = result.rows.item(0);
+        setNome(idoso.nome || '');
+        setIdade(idoso.idade ? idoso.idade.toString() : '');
+        setEndereco(idoso.endereco || '');
+        setContatos(idoso.contatos || '');
+        setDescricao(idoso.descricao || '');
+        setImportante(idoso.importante || '');
+        setAlergias(idoso.alergias || '');
+        setDoencas(idoso.doencas || '');
+        setObservacoes(idoso.observacoes || '');
+        setDataCadastro(idoso.data_cadastro || null);
+        setIdosoId(idoso.id);
+      }
+      return true;
+    } catch (error) {
+      console.error('Erro ao carregar dados do idoso:', error);
+      Alert.alert('Erro', 'Não foi possível carregar os dados do idoso: ' + error.message);
+      throw error;
+    } finally {
+      if (db) {
+        try {
+          await db.close();
+        } catch (closeError) {
+          console.error('Erro ao fechar conexão com banco:', closeError);
+        }
+      }
+    }
+  };
 
   // Função para limpar o formulário
   const limparFormulario = () => {
@@ -352,6 +407,9 @@ const CadastroIdoso = () => {
               setIdosoId(null);
               
               Alert.alert('Sucesso', 'Cadastro excluído com sucesso!');
+              
+              // Fechar o modal após excluir
+              onClose(true);
             } catch (error) {
               console.error('Erro ao excluir cadastro:', error);
               Alert.alert('Erro', 'Não foi possível excluir o cadastro: ' + error.message);
@@ -399,26 +457,32 @@ const CadastroIdoso = () => {
     }
   };
 
-  // Formatar a data para exibição
-  const formatarData = (dataString) => {
-    if (!dataString) return '';
-    
-    const data = new Date(dataString);
-    return `${data.getDate().toString().padStart(2, '0')}/${(data.getMonth() + 1).toString().padStart(2, '0')}/${data.getFullYear()} ${data.getHours().toString().padStart(2, '0')}:${data.getMinutes().toString().padStart(2, '0')}`;
-  };
-
+  // Renderização do componente
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
     >
       <View style={styles.header}>
-        <Text style={styles.headerText}>Cadastro de Idoso</Text>
-        {dataCadastro && (
-          <Text style={styles.dataCadastro}>
-            Cadastrado em: {formatarData(dataCadastro)}
-          </Text>
-        )}
+        <TouchableOpacity 
+          style={styles.backButton} 
+          onPress={() => onClose(false)}
+        >
+          <Text style={styles.backButtonText}>Voltar</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>
+          {idosoId ? 'Editar Idoso' : 'Novo Idoso'}
+        </Text>
+        <View style={styles.headerRight}>
+          {idosoId && (
+            <TouchableOpacity 
+              style={styles.deleteButton} 
+              onPress={excluirCadastro}
+            >
+              <Text style={styles.deleteButtonText}>Excluir</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {isLoading ? (
@@ -427,149 +491,174 @@ const CadastroIdoso = () => {
           <Text style={styles.loadingText}>Carregando...</Text>
         </View>
       ) : (
-        <ScrollView style={styles.scrollContainer}>
+        <ScrollView style={styles.scrollView}>
           <View style={styles.formContainer}>
-            {/* Dados Básicos */}
-            <View style={styles.secaoContainer}>
-              <Text style={styles.secaoTitulo}>Dados Básicos</Text>
-              
-              <Text style={styles.label}>Nome Completo*</Text>
+            {/* Campo Nome */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Nome*</Text>
               <TextInput
                 style={styles.input}
                 value={nome}
                 onChangeText={setNome}
-                placeholder="Digite o nome completo"
+                placeholder="Nome completo"
+                placeholderTextColor="#999"
               />
+            </View>
 
+            {/* Campo Idade */}
+            <View style={styles.inputGroup}>
               <Text style={styles.label}>Idade</Text>
               <TextInput
                 style={styles.input}
                 value={idade}
-                onChangeText={(texto) => setIdade(texto.replace(/\D/g, ''))}
-                placeholder="Digite a idade"
+                onChangeText={setIdade}
+                placeholder="Idade"
+                placeholderTextColor="#999"
                 keyboardType="numeric"
-                maxLength={3}
               />
+            </View>
 
+            {/* Campo Endereço */}
+            <View style={styles.inputGroup}>
               <Text style={styles.label}>Endereço</Text>
               <TextInput
                 style={styles.input}
                 value={endereco}
                 onChangeText={setEndereco}
-                placeholder="Digite o endereço completo"
+                placeholder="Endereço completo"
+                placeholderTextColor="#999"
+                multiline
               />
+            </View>
 
+            {/* Campo Contatos */}
+            <View style={styles.inputGroup}>
               <Text style={styles.label}>Contatos</Text>
               <TextInput
-                style={[styles.input, styles.textArea]}
+                style={styles.textArea}
                 value={contatos}
                 onChangeText={setContatos}
-                placeholder="Telefones e contatos de emergência"
-                multiline={true}
-                textAlignVertical="top"
+                placeholder="Telefones, e-mails, contatos de emergência..."
+                placeholderTextColor="#999"
+                multiline
+                numberOfLines={3}
               />
             </View>
 
-            {/* Informações de Saúde */}
-            <View style={styles.secaoContainer}>
-              <Text style={styles.secaoTitulo}>Informações de Saúde</Text>
-              
+            {/* Campo Descrição */}
+            <View style={styles.inputGroup}>
               <Text style={styles.label}>Descrição Geral</Text>
               <TextInput
-                style={[styles.input, styles.textArea]}
+                style={styles.textArea}
                 value={descricao}
                 onChangeText={setDescricao}
-                placeholder="Descrição geral do estado de saúde"
-                multiline={true}
-                textAlignVertical="top"
+                placeholder="Descrição geral do idoso..."
+                placeholderTextColor="#999"
+                multiline
+                numberOfLines={4}
               />
+            </View>
 
+            {/* Campo Informações Importantes */}
+            <View style={styles.inputGroup}>
               <Text style={styles.label}>Informações Importantes</Text>
               <TextInput
-                style={[styles.input, styles.textArea]}
+                style={styles.textArea}
                 value={importante}
                 onChangeText={setImportante}
-                placeholder="Informações críticas que devem ser conhecidas"
-                multiline={true}
-                textAlignVertical="top"
+                placeholder="Informações importantes sobre o idoso..."
+                placeholderTextColor="#999"
+                multiline
+                numberOfLines={4}
               />
+            </View>
 
+            {/* Campo Alergias */}
+            <View style={styles.inputGroup}>
               <Text style={styles.label}>Alergias</Text>
               <TextInput
-                style={[styles.input, styles.textArea]}
+                style={styles.textArea}
                 value={alergias}
                 onChangeText={setAlergias}
-                placeholder="Liste as alergias conhecidas"
-                multiline={true}
-                textAlignVertical="top"
+                placeholder="Alergias conhecidas..."
+                placeholderTextColor="#999"
+                multiline
+                numberOfLines={3}
               />
+            </View>
 
+            {/* Campo Doenças */}
+            <View style={styles.inputGroup}>
               <Text style={styles.label}>Doenças</Text>
               <TextInput
-                style={[styles.input, styles.textArea]}
+                style={styles.textArea}
                 value={doencas}
                 onChangeText={setDoencas}
-                placeholder="Liste as doenças crônicas ou condições médicas"
-                multiline={true}
-                textAlignVertical="top"
+                placeholder="Doenças e condições médicas..."
+                placeholderTextColor="#999"
+                multiline
+                numberOfLines={3}
               />
             </View>
 
-            {/* Observações */}
-            <View style={styles.secaoContainer}>
-              <Text style={styles.secaoTitulo}>Observações Adicionais</Text>
-              
+            {/* Campo Observações */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Observações Adicionais</Text>
               <TextInput
-                style={[styles.input, styles.textArea]}
+                style={styles.textArea}
                 value={observacoes}
                 onChangeText={setObservacoes}
-                placeholder="Informações adicionais relevantes"
-                multiline={true}
-                textAlignVertical="top"
+                placeholder="Observações adicionais..."
+                placeholderTextColor="#999"
+                multiline
+                numberOfLines={4}
               />
             </View>
 
+            {/* Data de cadastro */}
+            {dataCadastro && (
+              <View style={styles.infoRow}>
+                <Text style={styles.infoText}>
+                  Data de cadastro: {new Date(dataCadastro).toLocaleDateString('pt-BR')}
+                </Text>
+              </View>
+            )}
+
             {/* Botões de ação */}
-            <View style={styles.botoesContainer}>
-              <TouchableOpacity 
-                style={[styles.botao, styles.botaoLimpar]} 
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                style={[styles.button, styles.clearButton]}
                 onPress={limparFormulario}
               >
-                <Text style={styles.botaoTexto}>Limpar</Text>
+                <Text style={styles.buttonText}>Limpar</Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[styles.botao, styles.botaoSalvar]} 
-                onPress={salvarDados}
-              >
-                <Text style={styles.botaoTexto}>Salvar</Text>
-              </TouchableOpacity>
-            </View>
 
-            {/* Botões adicionais */}
-            <View style={styles.botoesContainer}>
-              <TouchableOpacity 
-                style={[styles.botao, styles.botaoNovo]} 
+              <TouchableOpacity
+                style={[styles.button, styles.newButton]}
                 onPress={novoCadastro}
               >
-                <Text style={styles.botaoTexto}>Novo</Text>
+                <Text style={styles.buttonText}>Novo</Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[styles.botao, styles.botaoExcluir]} 
-                onPress={excluirCadastro}
+
+              <TouchableOpacity
+                style={[styles.button, styles.shareButton]}
+                onPress={compartilharDados}
               >
-                <Text style={styles.botaoTexto}>Excluir</Text>
+                <Text style={styles.buttonText}>Compartilhar</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.button, styles.saveButton, isSaving && styles.disabledButton]}
+                onPress={salvarDados}
+                disabled={isSaving}
+              >
+                {isSaving ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.buttonText}>Salvar</Text>
+                )}
               </TouchableOpacity>
             </View>
-
-            {/* Botão de compartilhar */}
-            <TouchableOpacity 
-              style={[styles.botao, styles.botaoCompartilhar, { marginTop: 10 }]} 
-              onPress={compartilharDados}
-            >
-              <Text style={styles.botaoTexto}>Compartilhar Informações</Text>
-            </TouchableOpacity>
           </View>
         </ScrollView>
       )}
@@ -580,109 +669,134 @@ const CadastroIdoso = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5FCFF',
+    backgroundColor: '#F5F5F5',
   },
-  header: {
+   header: {
     backgroundColor: '#4A90E2',
     padding: 15,
     alignItems: 'center',
   },
-  headerText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: 'white',
-  },
-  dataCadastro: {
-    color: 'white',
-    fontSize: 12,
-    marginTop: 5,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: '#4A90E2',
-  },
-  scrollContainer: {
-    flex: 1,
-  },
-  formContainer: {
-    padding: 15,
-  },
-  secaoContainer: {
-    marginBottom: 20,
-    backgroundColor: 'white',
-    borderRadius: 8,
-    padding: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  secaoTitulo: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 15,
-    color: '#4A90E2',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    paddingBottom: 5,
-  },
-  label: {
-    fontSize: 16,
-    marginBottom: 5,
-    color: '#333',
-  },
-  input: {
-    backgroundColor: '#f9f9f9',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 5,
-    padding: 10,
-    marginBottom: 15,
-    fontSize: 16,
-  },
-  textArea: {
-    minHeight: 80,
-  },
-  botoesContainer: {
+   headerTitle: {   
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 10,
-  },
-  botao: {
-    padding: 15,
-    borderRadius: 5,
     alignItems: 'center',
-    justifyContent: 'center',
-    width: '48%',
-  },
-  botaoSalvar: {
-    backgroundColor: '#4CAF50',
-  },
-  botaoLimpar: {
-    backgroundColor: '#f44336',
-  },
-  botaoNovo: {
-    backgroundColor: '#2196F3',
-  },
-  botaoExcluir: {
-    backgroundColor: '#FF9800',
-  },
-  botaoCompartilhar: {
-    backgroundColor: '#9C27B0',
-    width: '100%',
-  },
-  botaoTexto: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-});
-
-export default CadastroIdoso;
+    justifyContent: 'space-between',
+    backgroundColor: '#4A90E2',
+    padding: 15,
+    elevation: 3,
+    },
+    headerTitle: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: 'white',
+      textAlign: 'center',
+    },
+    backButton: {
+      padding: 5,
+    },
+    backButtonText: {
+      color: 'white',
+      fontSize: 16,
+    },
+    headerRight: {
+      width: 80,
+      alignItems: 'flex-end',
+    },
+    deleteButton: {
+      padding: 5,
+    },
+    deleteButtonText: {
+      color: '#FF6B6B',
+      fontSize: 16,
+      fontWeight: 'bold',
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    loadingText: {
+      marginTop: 10,
+      fontSize: 16,
+      color: '#4A90E2',
+    },
+    scrollView: {
+      flex: 1,
+    },
+    formContainer: {
+      padding: 15,
+    },
+    inputGroup: {
+      marginBottom: 15,
+    },
+    label: {
+      fontSize: 16,
+      fontWeight: 'bold',
+      marginBottom: 5,
+      color: '#333',
+    },
+    input: {
+      backgroundColor: 'white',
+      borderRadius: 5,
+      padding: 10,
+      fontSize: 16,
+      borderWidth: 1,
+      borderColor: '#DDD',
+    },
+    textArea: {
+      backgroundColor: 'white',
+      borderRadius: 5,
+      padding: 10,
+      fontSize: 16,
+      borderWidth: 1,
+      borderColor: '#DDD',
+      minHeight: 100,
+      textAlignVertical: 'top',
+    },
+    infoRow: {
+      marginBottom: 15,
+      padding: 10,
+      backgroundColor: '#E8F4FD',
+      borderRadius: 5,
+    },
+    infoText: {
+      fontSize: 14,
+      color: '#4A90E2',
+    },
+    buttonContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginTop: 20,
+      marginBottom: 30,
+    },
+    button: {
+      flex: 1,
+      padding: 12,
+      borderRadius: 5,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginHorizontal: 5,
+      elevation: 2,
+    },
+    clearButton: {
+      backgroundColor: '#FF9800',
+    },
+    newButton: {
+      backgroundColor: '#4CAF50',
+    },
+    shareButton: {
+      backgroundColor: '#9C27B0',
+    },
+    saveButton: {
+      backgroundColor: '#4A90E2',
+    },
+    disabledButton: {
+      backgroundColor: '#B0BEC5',
+    },
+    buttonText: {
+      color: 'white',
+      fontWeight: 'bold',
+      fontSize: 14,
+    },
+  });
+  
+  export default CadastroIdoso;
