@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Modal } from 'react-native';
 import EmergencyPanel from './lib/call';
 import ListaIdosos from './lib/ListaIdosos';
 import CadastroIdoso from './lib/CadastroIdoso';
+import Idoso from './lib/idoso'; // Importando o componente Idoso
 
 // Definindo interfaces para as props dos componentes
 interface ListaIdososProps {
@@ -20,6 +21,7 @@ const HomeScreen = () => {
   const [showCadastroIdoso, setShowCadastroIdoso] = useState(false);
   const [idosoSelecionadoId, setIdosoSelecionadoId] = useState<number | null>(null);
   const [refreshKey, setRefreshKey] = useState(0); // Estado para forçar atualização da lista
+  const [mostrarDetalhesIdoso, setMostrarDetalhesIdoso] = useState(false); // Novo estado para controlar a visualização do idoso
 
   const handleQuickDial = () => {
     setShowEmergencyPanel(true);
@@ -32,12 +34,11 @@ const HomeScreen = () => {
 
   const handleIdosoSelecionado = (idosoId: number) => {
     setIdosoSelecionadoId(idosoId);
-    setShowCadastroIdoso(true);
+    setMostrarDetalhesIdoso(true); // Mostrar detalhes do idoso em vez de abrir o cadastro
   };
 
   const handleCloseCadastro = useCallback((cadastroRealizado: boolean = false) => {
     setShowCadastroIdoso(false);
-    setIdosoSelecionadoId(null);
     
     // Se um cadastro foi realizado (novo ou atualização), atualiza a lista
     if (cadastroRealizado) {
@@ -45,19 +46,52 @@ const HomeScreen = () => {
     }
   }, []);
 
+  const handleVoltarParaLista = () => {
+    setMostrarDetalhesIdoso(false);
+    setIdosoSelecionadoId(null);
+  };
+
+  const handleEditarIdoso = () => {
+    setShowCadastroIdoso(true);
+  };
+
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Idosos</Text>
+        <Text style={styles.headerTitle}>
+          {mostrarDetalhesIdoso ? 'Detalhes do Idoso' : 'Idosos'}
+        </Text>
+        {mostrarDetalhesIdoso && (
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={handleVoltarParaLista}
+          >
+            <Text style={styles.backButtonText}>← Voltar</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
-      {/* Content Area - Lista de Idosos */}
+      {/* Content Area */}
       <View style={styles.content}>
-        <ListaIdosos 
-          onIdosoSelecionado={handleIdosoSelecionado} 
-          refreshKey={refreshKey} // Passando a chave de atualização
-        />
+        {mostrarDetalhesIdoso ? (
+          // Mostrar detalhes do idoso
+          <View style={styles.idosoContainer}>
+            <Idoso idosoId={idosoSelecionadoId} />
+            <TouchableOpacity 
+              style={styles.editButton}
+              onPress={handleEditarIdoso}
+            >
+              <Text style={styles.editButtonText}>Editar Idoso</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          // Mostrar lista de idosos
+          <ListaIdosos 
+            onIdosoSelecionado={handleIdosoSelecionado} 
+            refreshKey={refreshKey}
+          />
+        )}
       </View>
 
       {/* Emergency Panel Modal */}
@@ -92,24 +126,26 @@ const HomeScreen = () => {
         />
       </Modal>
 
-      {/* Footer */}
-      <View style={styles.footer}>
-        <TouchableOpacity 
-          style={styles.footerButton} 
-          onPress={handleQuickDial}
-        >
-          <Text style={styles.iconText}>📞</Text>
-          <Text style={styles.footerButtonText}>Discagem Rápida</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={styles.footerButton} 
-          onPress={handleAdicionarIdoso}
-        >
-          <Text style={styles.iconText}>👤+</Text>
-          <Text style={styles.footerButtonText}>Adicionar Idoso</Text>
-        </TouchableOpacity>
-      </View>
+      {/* Footer - só mostrar quando estiver na lista */}
+      {!mostrarDetalhesIdoso && (
+        <View style={styles.footer}>
+          <TouchableOpacity 
+            style={styles.footerButton} 
+            onPress={handleQuickDial}
+          >
+            <Text style={styles.iconText}>📞</Text>
+            <Text style={styles.footerButtonText}>Discagem Rápida</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.footerButton} 
+            onPress={handleAdicionarIdoso}
+          >
+            <Text style={styles.iconText}>👤+</Text>
+            <Text style={styles.footerButtonText}>Adicionar Idoso</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 };
@@ -122,6 +158,7 @@ const styles = StyleSheet.create({
   header: {
     height: 60,
     backgroundColor: '#4A90E2',
+    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 4,
@@ -129,15 +166,41 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 2,
+    position: 'relative',
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#FFFFFF',
   },
+  backButton: {
+    position: 'absolute',
+    left: 10,
+    padding: 5,
+  },
+  backButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
   content: {
     flex: 1,
     padding: 16,
+  },
+  idosoContainer: {
+    flex: 1,
+  },
+  editButton: {
+    backgroundColor: '#4A90E2',
+    padding: 12,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  editButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
   footer: {
     height: 70,

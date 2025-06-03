@@ -12,18 +12,13 @@ const phoneCall = number => {
   const sanitizedNumber = number.trim();
   const url = `tel:${sanitizedNumber}`;
 
-  Linking.canOpenURL(url)
-    .then(supported => {
-      if (!supported) {
-        Alert.alert('Erro', 'Discagem não suportada neste dispositivo.');
-      } else {
-        return Linking.openURL(url);
-      }
-    })
-    .catch(err => {
-      Alert.alert('Erro', 'Ocorreu um problema ao tentar discar.');
-      console.error(err);
-    });
+  try{
+  if(Linking.canOpenURL(url)){
+    Linking.openURL(url);
+  }
+  } catch(error){
+    Alert.alert('Erro', 'Ocorreu um problema ao tentar discar.');
+  }
 };
 
 const EmergencyPanel = () => {
