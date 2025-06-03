@@ -90,7 +90,12 @@ const ListaIdosos = ({ onIdosoSelecionado, refreshKey = 0 }) => {
   const renderItem = ({ item }) => (
     <TouchableOpacity
       style={styles.idosoCard}
-      onPress={() => onIdosoSelecionado(Number(item.id))}
+      onPress={() => {
+        // Chama a função de callback diretamente quando um idoso é selecionado
+        if (onIdosoSelecionado) {
+          onIdosoSelecionado(Number(item.id));
+        }
+      }}
     >
       <View style={styles.avatarContainer}>
         {/* Placeholder para a foto futura */}
@@ -211,7 +216,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#999',
     marginTop: 8,
-  },
+  }
 });
 
 export default ListaIdosos;
