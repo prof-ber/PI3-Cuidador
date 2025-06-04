@@ -11,7 +11,8 @@ import {
   Image,
   TextInput,
   Modal,
-  Button
+  Button,
+  BackHandler
 } from 'react-native';
 import SQLite from 'react-native-sqlite-storage';
 import ConfigureAlarmButton from './alarme'; // Importando o componente de alarme
@@ -20,9 +21,27 @@ import CheckList from './checklist'; // Importando o componente de checklist
 // Habilitar promises para SQLite
 SQLite.enablePromise(true);
 
-const Idoso = ({ idosoId }) => {
+const Idoso = ({ idosoId, onBackPress }) => {
   const [idoso, setIdoso] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Adicionar manipulador para o botão de voltar do hardware
+  useEffect(() => {
+    const backAction = () => {
+      if (onBackPress) {
+        onBackPress();
+        return true; // Impede o comportamento padrão
+      }
+      return false; // Permite o comportamento padrão
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backAction
+    );
+
+    return () => backHandler.remove(); // Limpa o event listener quando o componente é desmontado
+  }, [onBackPress]);
 
   // Função para abrir o banco de dados
   const openDatabase = async () => {

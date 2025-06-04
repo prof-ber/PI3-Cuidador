@@ -1,5 +1,6 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal } from 'react-native';
+
+import React, { useState, useCallback, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, BackHandler, Alert } from 'react-native';
 import EmergencyPanel from './lib/call';
 import ListaIdosos from './lib/ListaIdosos';
 import CadastroIdoso from './lib/CadastroIdoso';
@@ -22,6 +23,58 @@ const HomeScreen = () => {
   const [idosoSelecionadoId, setIdosoSelecionadoId] = useState<number | null>(null);
   const [refreshKey, setRefreshKey] = useState(0); // Estado para forçar atualização da lista
   const [mostrarDetalhesIdoso, setMostrarDetalhesIdoso] = useState(false); // Novo estado para controlar a visualização do idoso
+
+  // Manipulador do botão de voltar
+  useEffect(() => {
+    const backAction = () => {
+      // Se estiver mostrando detalhes do idoso, voltar para a lista
+      if (mostrarDetalhesIdoso) {
+        handleVoltarParaLista();
+        return true; // Impede o comportamento padrão de voltar
+      }
+      
+      // Se estiver mostrando o painel de emergência, fechar o painel
+      if (showEmergencyPanel) {
+        setShowEmergencyPanel(false);
+        return true;
+      }
+      
+      // Se estiver mostrando o cadastro de idoso, fechar o cadastro
+      if (showCadastroIdoso) {
+        handleCloseCadastro(false);
+        return true;
+      }
+      
+      // Se estiver na tela principal, perguntar se deseja sair do app
+      if (!mostrarDetalhesIdoso && !showEmergencyPanel && !showCadastroIdoso) {
+        Alert.alert(
+          "Sair do aplicativo",
+          "Deseja realmente sair do aplicativo?",
+          [
+            {
+              text: "Cancelar",
+              onPress: () => null,
+              style: "cancel"
+            },
+            { 
+              text: "Sim", 
+              onPress: () => BackHandler.exitApp() 
+            }
+          ]
+        );
+        return true;
+      }
+      
+      return false; // Permite o comportamento padrão de voltar
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backAction
+    );
+
+    return () => backHandler.remove(); // Limpa o event listener quando o componente é desmontado
+  }, [mostrarDetalhesIdoso, showEmergencyPanel, showCadastroIdoso]);
 
   const handleQuickDial = () => {
     setShowEmergencyPanel(true);
@@ -77,7 +130,10 @@ const HomeScreen = () => {
         {mostrarDetalhesIdoso ? (
           // Mostrar detalhes do idoso
           <View style={styles.idosoContainer}>
-            <Idoso idosoId={idosoSelecionadoId} />
+            <Idoso 
+              idosoId={idosoSelecionadoId} 
+              onBackPress={handleVoltarParaLista} // Passando a função de voltar para o componente Idoso
+            />
             <TouchableOpacity 
               style={styles.editButton}
               onPress={handleEditarIdoso}
@@ -151,6 +207,7 @@ const HomeScreen = () => {
 };
 
 const styles = StyleSheet.create({
+  // Estilos existentes permanecem iguais
   container: {
     flex: 1,
     backgroundColor: '#F5F5F5',
