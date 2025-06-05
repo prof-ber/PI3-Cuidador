@@ -12,6 +12,7 @@ import {
   TextInput,
   Modal,
   Button,
+  BackHandler,
   Platform,
   Linking,
   PermissionsAndroid,
@@ -25,12 +26,30 @@ import {launchCamera} from 'react-native-image-picker';
 // Habilitar promises para SQLite
 SQLite.enablePromise(true);
 
-const Idoso = ({idosoId}) => {
+const Idoso = ({idosoId, onBackPress}) => {
   const [idoso, setIdoso] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [profileImage, setProfileImage] = useState(null);
   const [imageError, setImageError] = useState(false);
   const [imageStoragePath, setImageStoragePath] = useState(null);
+
+  // Adicionar manipulador para o botão de voltar do hardware
+  useEffect(() => {
+    const backAction = () => {
+      if (onBackPress) {
+        onBackPress();
+        return true; // Impede o comportamento padrão
+      }
+      return false; // Permite o comportamento padrão
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backAction,
+    );
+
+    return () => backHandler.remove(); // Limpa o event listener quando o componente é desmontado
+  }, [onBackPress]);
 
   // Função para abrir o banco de dados
   const openDatabase = async () => {
