@@ -10,8 +10,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  Share,
-  ToastAndroid
 } from 'react-native';
 import SQLite from 'react-native-sqlite-storage';
 
@@ -625,28 +623,16 @@ const CadastroIdoso = ({ idosoId: idosoIdProp, onClose }) => {
             )}
 
             {/* Botões de ação */}
+            // Substituir a seção de botões de ação
+            {/* Botões de ação */}
             <View style={styles.buttonContainer}>
               <TouchableOpacity
-                style={[styles.button, styles.clearButton]}
-                onPress={limparFormulario}
+                style={[styles.button, styles.cancelButton]}
+                onPress={() => onClose(false)}
               >
-                <Text style={styles.buttonText}>Limpar</Text>
+                <Text style={styles.buttonText}>Cancelar</Text>
               </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.button, styles.newButton]}
-                onPress={novoCadastro}
-              >
-                <Text style={styles.buttonText}>Novo</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.button, styles.shareButton]}
-                onPress={compartilharDados}
-              >
-                <Text style={styles.buttonText}>Compartilhar</Text>
-              </TouchableOpacity>
-
+            
               <TouchableOpacity
                 style={[styles.button, styles.saveButton, isSaving && styles.disabledButton]}
                 onPress={salvarDados}
@@ -683,12 +669,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#4A90E2',
     padding: 15,
     elevation: 3,
-    },
-    headerTitle: {
-      fontSize: 18,
-      fontWeight: 'bold',
-      color: 'white',
-      textAlign: 'center',
     },
     backButton: {
       padding: 5,
@@ -762,6 +742,7 @@ const styles = StyleSheet.create({
       fontSize: 14,
       color: '#4A90E2',
     },
+    // Adicionar ao StyleSheet
     buttonContainer: {
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -776,6 +757,20 @@ const styles = StyleSheet.create({
       justifyContent: 'center',
       marginHorizontal: 5,
       elevation: 2,
+    },
+    cancelButton: {
+      backgroundColor: '#FF9800',
+    },
+    saveButton: {
+      backgroundColor: '#4A90E2',
+    },
+    disabledButton: {
+      backgroundColor: '#B0BEC5',
+    },
+    buttonText: {
+      color: 'white',
+      fontWeight: 'bold',
+      fontSize: 14,
     },
     clearButton: {
       backgroundColor: '#FF9800',
