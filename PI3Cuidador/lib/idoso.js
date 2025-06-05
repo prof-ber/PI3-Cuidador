@@ -22,6 +22,7 @@ import ConfigureAlarmButton from './alarme'; // Importando o componente de alarm
 import CheckList from './checklist'; // Importando o componente de checklist
 import RNFS from 'react-native-fs';
 import {launchCamera} from 'react-native-image-picker';
+import Relatorio from './relatorio';
 
 // Habilitar promises para SQLite
 SQLite.enablePromise(true);
@@ -32,6 +33,7 @@ const Idoso = ({idosoId, onBackPress}) => {
   const [profileImage, setProfileImage] = useState(null);
   const [imageError, setImageError] = useState(false);
   const [imageStoragePath, setImageStoragePath] = useState(null);
+  const [showRelatorio, setShowRelatorio] = useState(false);
 
   // Adicionar manipulador para o botão de voltar do hardware
   useEffect(() => {
@@ -636,6 +638,30 @@ const Idoso = ({idosoId, onBackPress}) => {
         <Text style={styles.sectionTitle}>Alarmes e Lembretes</Text>
         <ConfigureAlarmButton idosoNome={idoso.nome} />
       </View>
+
+      {/* Seção de Relatório */}
+      <View style={styles.container}>
+        <Text style={styles.sectionTitle}>Relatório de Acompanhamento</Text>
+        <TouchableOpacity
+          style={styles.relatorioButton}
+          onPress={() => setShowRelatorio(true)}>
+          <Text style={styles.relatorioButtonText}>Criar Relatório</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Modal para o Relatório */}
+      <Modal
+        visible={showRelatorio}
+        animationType="slide"
+        onRequestClose={() => setShowRelatorio(false)}>
+        <View style={styles.modalContainer}>
+          <Relatorio
+            idosoId={idosoId}
+            idosoNome={idoso.nome}
+            onClose={() => setShowRelatorio(false)}
+          />
+        </View>
+      </Modal>
     </ScrollView>
   );
 };
@@ -833,6 +859,22 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  relatorioButton: {
+    backgroundColor: '#FF9800',
+    padding: 15,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  relatorioButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#F5F5F5',
   },
 });
 
