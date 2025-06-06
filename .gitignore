@@ -143,6 +143,7 @@ dist
 /PI3Cuidador/android/app/build/
 /PI3Cuidador/android/app/.cxx
 /PI3Cuidador/android/local.properties
+/PI3Cuidador/my-app-key.keystore
 
 # iOS build files
 /PI3Cuidador/ios/build/
